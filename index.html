@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Product Showcase</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="mobile-toggle" onclick="toggleSidebar()">
+            ☰
+        </div>
+
+        <div class="sidebar" id="sidebar">
+            <div class="logo">SHOWCASE</div>
+            
+            <div class="product-info" id="productInfo">
+                <h2>Premium Headphones</h2>
+                <div class="price">$299.99</div>
+                <p>Experience crystal-clear audio with our premium wireless headphones featuring advanced noise cancellation and 30-hour battery life.</p>
+            </div>
+
+            <div class="product-specs" id="productSpecs">
+                <h3>Specifications</h3>
+                <div class="spec-item">
+                    <span>Battery Life</span>
+                    <span>30 hours</span>
+                </div>
+                <div class="spec-item">
+                    <span>Weight</span>
+                    <span>250g</span>
+                </div>
+                <div class="spec-item">
+                    <span>Connectivity</span>
+                    <span>Bluetooth 5.0</span>
+                </div>
+                <div class="spec-item">
+                    <span>Warranty</span>
+                    <span>2 years</span>
+                </div>
+            </div>
+
+            <div class="product-selector">
+                <h3>Select Product</h3>
+                <div class="product-thumbnails">
+                    <div class="thumbnail active" onclick="switchProduct(0)">
+                        <div class="thumbnail-icon">🎧</div>
+                        <div class="thumbnail-name">Headphones</div>
+                    </div>
+                    <div class="thumbnail" onclick="switchProduct(1)">
+                        <div class="thumbnail-icon">📱</div>
+                        <div class="thumbnail-name">Smartphone</div>
+                    </div>
+                    <div class="thumbnail" onclick="switchProduct(2)">
+                        <div class="thumbnail-icon">⌚</div>
+                        <div class="thumbnail-name">Smartwatch</div>
+                    </div>
+                    <div class="thumbnail" onclick="switchProduct(3)">
+                        <div class="thumbnail-icon">💻</div>
+                        <div class="thumbnail-name">Laptop</div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="buy-button">Add to Cart</button>
+        </div>
+
+        <div class="viewport" id="viewport">
+            <div class="controls">
+                <div class="control-btn" onclick="resetView()" title="Reset View">↻</div>
+                <div class="control-btn" onclick="zoomIn()" title="Zoom In">+</div>
+                <div class="control-btn" onclick="zoomOut()" title="Zoom Out">-</div>
+                <div class="control-btn" onclick="toggleAutoRotate()" title="Auto Rotate" id="autoRotateBtn">⟲</div>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Loading 3D Model...</p>
+            </div>
+
+            <div class="instructions">
+                <p><strong>Mouse:</strong> Drag to rotate • Scroll to zoom</p>
+                <p><strong>Touch:</strong> Drag to rotate • Pinch to zoom</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
