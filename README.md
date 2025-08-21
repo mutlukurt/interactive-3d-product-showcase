@@ -1,5 +1,7 @@
 # Interactive 3D Product Showcase
 
+🌐 **[Live Demo](https://mutlukurt.github.io/interactive-3d-product-showcase/)**
+
 A modern, interactive 3D product showcase built with Three.js that allows users to view and interact with 3D models of various products.
 
 ## Features
@@ -52,10 +54,6 @@ A modern, interactive 3D product showcase built with Three.js that allows users 
 - **HTML5/CSS3**: Structure and styling
 - **JavaScript**: Interactive functionality
 - **WebGL**: Hardware-accelerated 3D rendering
-
-## Live Demo
-
-🌐 **[View Live Demo](https://mutlukurt.github.io/interactive-3d-product-showcase/)**
 
 ## Getting Started
 
