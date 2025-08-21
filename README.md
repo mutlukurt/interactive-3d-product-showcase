@@ -53,6 +53,10 @@ A modern, interactive 3D product showcase built with Three.js that allows users 
 - **JavaScript**: Interactive functionality
 - **WebGL**: Hardware-accelerated 3D rendering
 
+## Live Demo
+
+🌐 **[View Live Demo](https://your-username.github.io/Interactive-3d-product-showcase/)**
+
 ## Getting Started
 
 1. Simply open `index.html` in a modern web browser
