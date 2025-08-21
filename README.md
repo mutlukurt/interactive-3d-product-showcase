@@ -55,7 +55,7 @@ A modern, interactive 3D product showcase built with Three.js that allows users 
 
 ## Live Demo
 
-🌐 **[View Live Demo](https://your-username.github.io/Interactive-3d-product-showcase/)**
+🌐 **[View Live Demo](https://mutlukurt.github.io/interactive-3d-product-showcase/)**
 
 ## Getting Started
 
