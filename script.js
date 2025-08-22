@@ -1,3 +1,4 @@
+// ===== MOBILE-FIRST RESPONSIVE 3D PRODUCT SHOWCASE =====
 // Global variables
 let scene, camera, renderer, currentProduct;
 let mouseX = 0, mouseY = 0;
@@ -6,6 +7,10 @@ let currentRotationX = 0, currentRotationY = 0;
 let isMouseDown = false;
 let autoRotate = false;
 let zoomLevel = 1;
+let isMobile = false;
+let touchStartDistance = 0;
+let initialZoomLevel = 1;
+let isProductCardClosed = false; // Track card state
 
 // Product data
 const products = [
@@ -65,32 +70,89 @@ let currentProductIndex = 0;
 function init() {
     const viewport = document.getElementById('viewport');
     
+    // Detect mobile device
+    detectDevice();
+    
+    // Initialize product card state
+    initializeProductCard();
+    
     // Scene setup
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
     scene.background = null; // Transparent background
 
-    // Camera setup
-    camera = new THREE.PerspectiveCamera(75, viewport.clientWidth / viewport.clientHeight, 0.1, 1000);
+    // Camera setup with responsive aspect ratio
+    const aspectRatio = viewport.clientWidth / viewport.clientHeight;
+    camera = new THREE.PerspectiveCamera(75, aspectRatio, 0.1, 1000);
     camera.position.set(0, 0, 5);
 
-    // Renderer setup
-    renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    // Renderer setup with performance optimizations
+    renderer = new THREE.WebGLRenderer({ 
+        alpha: true, 
+        antialias: true,
+        powerPreference: "high-performance"
+    });
     renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setClearColor(0x000000, 0);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
     viewport.appendChild(renderer.domElement);
 
     // Lighting setup
+    setupLighting();
+
+    // Create initial product
+    createProduct(currentProductIndex);
+
+    // Event listeners
+    setupEventListeners();
+
+    // Hide loading
+    const loadingElement = document.getElementById('loading');
+    if (loadingElement) {
+        loadingElement.style.display = 'none';
+    }
+
+    // Start animation loop
+    animate();
+}
+
+// Initialize product card state
+function initializeProductCard() {
+    // Check if user has previously closed the card (localStorage)
+    const cardClosed = localStorage.getItem('productCardClosed');
+    if (cardClosed === 'true') {
+        closeProductCard();
+    }
+    
+    // Show info toggle button if card is closed
+    updateInfoToggleVisibility();
+}
+
+// Device detection
+function detectDevice() {
+    isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+               window.innerWidth <= 768;
+    
+    // Add mobile class to body for CSS targeting
+    document.body.classList.toggle('mobile', isMobile);
+}
+
+// Lighting setup
+function setupLighting() {
     const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
     scene.add(ambientLight);
 
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     directionalLight.position.set(10, 10, 5);
     directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.mapSize.width = 1024; // Reduced for mobile performance
+    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 50;
     scene.add(directionalLight);
 
     const pointLight = new THREE.PointLight(0x4ade80, 0.5);
@@ -100,18 +162,6 @@ function init() {
     const rimLight = new THREE.DirectionalLight(0x764ba2, 0.3);
     rimLight.position.set(-5, 5, -5);
     scene.add(rimLight);
-
-    // Create initial product
-    createProduct(currentProductIndex);
-
-    // Event listeners
-    setupEventListeners();
-
-    // Hide loading
-    document.getElementById('loading').style.display = 'none';
-
-    // Start animation loop
-    animate();
 }
 
 function createProduct(index) {
@@ -232,22 +282,29 @@ function createProduct(index) {
 
 function updateProductInfo(index) {
     const product = products[index];
-    document.getElementById('productInfo').innerHTML = `
-        <h2>${product.name}</h2>
-        <div class="price">${product.price}</div>
-        <p>${product.description}</p>
-    `;
-
-    let specsHTML = '<h3>Specifications</h3>';
-    for (const [key, value] of Object.entries(product.specs)) {
-        specsHTML += `
-            <div class="spec-item">
-                <span>${key}</span>
-                <span>${value}</span>
-            </div>
+    const productInfoElement = document.getElementById('productInfo');
+    const productSpecsElement = document.getElementById('productSpecs');
+    
+    if (productInfoElement) {
+        productInfoElement.innerHTML = `
+            <h2>${product.name}</h2>
+            <div class="price">${product.price}</div>
+            <p>${product.description}</p>
         `;
     }
-    document.getElementById('productSpecs').innerHTML = specsHTML;
+
+    if (productSpecsElement) {
+        let specsHTML = '<h3>Specifications</h3>';
+        for (const [key, value] of Object.entries(product.specs)) {
+            specsHTML += `
+                <div class="spec-item">
+                    <span>${key}</span>
+                    <span>${value}</span>
+                </div>
+            `;
+        }
+        productSpecsElement.innerHTML = specsHTML;
+    }
 
     // Update active thumbnail
     document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
@@ -257,6 +314,7 @@ function updateProductInfo(index) {
 
 function setupEventListeners() {
     const viewport = document.getElementById('viewport');
+    if (!viewport) return;
 
     // Mouse events
     viewport.addEventListener('mousedown', onMouseDown);
@@ -265,22 +323,35 @@ function setupEventListeners() {
     viewport.addEventListener('wheel', onWheel);
 
     // Touch events for mobile
-    viewport.addEventListener('touchstart', onTouchStart);
-    viewport.addEventListener('touchmove', onTouchMove);
+    viewport.addEventListener('touchstart', onTouchStart, { passive: false });
+    viewport.addEventListener('touchmove', onTouchMove, { passive: false });
     viewport.addEventListener('touchend', onTouchEnd);
 
-    // Window resize
-    window.addEventListener('resize', onWindowResize);
+    // Window resize with debouncing
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(onWindowResize, 100);
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', onKeyDown);
+
+    // Prevent context menu on long press (mobile)
+    viewport.addEventListener('contextmenu', (e) => e.preventDefault());
 }
 
 function onMouseDown(event) {
+    if (isMobile) return; // Disable mouse events on mobile
+    
     isMouseDown = true;
     mouseX = event.clientX;
     mouseY = event.clientY;
+    event.preventDefault();
 }
 
 function onMouseMove(event) {
-    if (!isMouseDown) return;
+    if (!isMouseDown || isMobile) return;
 
     const deltaX = event.clientX - mouseX;
     const deltaY = event.clientY - mouseY;
@@ -300,23 +371,35 @@ function onMouseUp() {
 }
 
 function onWheel(event) {
+    if (isMobile) return; // Disable wheel on mobile
+    
     event.preventDefault();
     const delta = event.deltaY * -0.001;
     zoomLevel = Math.max(0.5, Math.min(3, zoomLevel + delta));
-    camera.position.z = 5 / zoomLevel;
+    if (camera) {
+        camera.position.z = 5 / zoomLevel;
+    }
 }
 
+// Enhanced touch handling for mobile
 function onTouchStart(event) {
     if (event.touches.length === 1) {
+        // Single touch - rotation
         isMouseDown = true;
         mouseX = event.touches[0].clientX;
         mouseY = event.touches[0].clientY;
+    } else if (event.touches.length === 2) {
+        // Two finger touch - pinch to zoom
+        touchStartDistance = getTouchDistance(event.touches);
+        initialZoomLevel = zoomLevel;
     }
 }
 
 function onTouchMove(event) {
     event.preventDefault();
+    
     if (event.touches.length === 1 && isMouseDown) {
+        // Single touch rotation
         const deltaX = event.touches[0].clientX - mouseX;
         const deltaY = event.touches[0].clientY - mouseY;
 
@@ -327,18 +410,69 @@ function onTouchMove(event) {
 
         mouseX = event.touches[0].clientX;
         mouseY = event.touches[0].clientY;
+    } else if (event.touches.length === 2) {
+        // Two finger pinch to zoom
+        const currentDistance = getTouchDistance(event.touches);
+        const scale = currentDistance / touchStartDistance;
+        zoomLevel = Math.max(0.5, Math.min(3, initialZoomLevel * scale));
+        if (camera) {
+            camera.position.z = 5 / zoomLevel;
+        }
     }
 }
 
 function onTouchEnd() {
     isMouseDown = false;
+    touchStartDistance = 0;
+}
+
+// Helper function to calculate distance between two touch points
+function getTouchDistance(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Keyboard navigation support
+function onKeyDown(event) {
+    switch(event.key) {
+        case 'ArrowLeft':
+            event.preventDefault();
+            targetRotationY -= 0.1;
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            targetRotationY += 0.1;
+            break;
+        case 'ArrowUp':
+            event.preventDefault();
+            targetRotationX -= 0.1;
+            break;
+        case 'ArrowDown':
+            event.preventDefault();
+            targetRotationX += 0.1;
+            break;
+        case 'Escape':
+            if (isMobile && !isProductCardClosed) {
+                closeProductCard();
+            }
+            break;
+    }
 }
 
 function onWindowResize() {
     const viewport = document.getElementById('viewport');
+    if (!viewport || !camera || !renderer) return;
+    
+    // Update camera aspect ratio
     camera.aspect = viewport.clientWidth / viewport.clientHeight;
     camera.updateProjectionMatrix();
+    
+    // Update renderer size
     renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+    
+    // Update pixel ratio for high-DPI displays
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 }
 
 function animate() {
@@ -361,7 +495,9 @@ function animate() {
         currentProduct.position.y = Math.sin(Date.now() * 0.001) * 0.1;
     }
 
-    renderer.render(scene, camera);
+    if (renderer && scene && camera) {
+        renderer.render(scene, camera);
+    }
 }
 
 // Control functions
@@ -369,23 +505,31 @@ function resetView() {
     targetRotationX = 0;
     targetRotationY = 0;
     zoomLevel = 1;
-    camera.position.z = 5;
+    if (camera) {
+        camera.position.z = 5;
+    }
 }
 
 function zoomIn() {
     zoomLevel = Math.min(3, zoomLevel + 0.2);
-    camera.position.z = 5 / zoomLevel;
+    if (camera) {
+        camera.position.z = 5 / zoomLevel;
+    }
 }
 
 function zoomOut() {
     zoomLevel = Math.max(0.5, zoomLevel - 0.2);
-    camera.position.z = 5 / zoomLevel;
+    if (camera) {
+        camera.position.z = 5 / zoomLevel;
+    }
 }
 
 function toggleAutoRotate() {
     autoRotate = !autoRotate;
     const btn = document.getElementById('autoRotateBtn');
-    btn.style.background = autoRotate ? 'rgba(74, 222, 128, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+    if (btn) {
+        btn.style.background = autoRotate ? 'rgba(74, 222, 128, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+    }
 }
 
 function switchProduct(index) {
@@ -394,10 +538,132 @@ function switchProduct(index) {
     resetView();
 }
 
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('hidden');
+// ===== PRODUCT CARD MANAGEMENT =====
+
+// Close product card
+function closeProductCard() {
+    const productCard = document.getElementById('productCard');
+    if (!productCard) return;
+    
+    // Add closed class for animation
+    productCard.classList.add('closed');
+    
+    // Update state
+    isProductCardClosed = true;
+    
+    // Save preference to localStorage
+    try {
+        localStorage.setItem('productCardClosed', 'true');
+    } catch (e) {
+        console.warn('Could not save to localStorage:', e);
+    }
+    
+    // Enable viewport interaction
+    enableViewportInteraction();
+    
+    // Show info toggle button
+    updateInfoToggleVisibility();
+    
+    // Enable body scroll on mobile
+    if (isMobile) {
+        document.body.style.overflow = '';
+    }
 }
+
+// Open product card
+function openProductCard() {
+    const productCard = document.getElementById('productCard');
+    if (!productCard) return;
+    
+    // Remove closed class for animation
+    productCard.classList.remove('closed');
+    
+    // Update state
+    isProductCardClosed = false;
+    
+    // Save preference to localStorage
+    try {
+        localStorage.setItem('productCardClosed', 'false');
+    } catch (e) {
+        console.warn('Could not save to localStorage:', e);
+    }
+    
+    // Disable viewport interaction on mobile
+    if (isMobile) {
+        disableViewportInteraction();
+        document.body.style.overflow = 'hidden';
+    }
+    
+    // Hide info toggle button
+    updateInfoToggleVisibility();
+}
+
+// Update info toggle button visibility
+function updateInfoToggleVisibility() {
+    const infoToggle = document.getElementById('infoToggle');
+    if (!infoToggle) return;
+    
+    if (isProductCardClosed && isMobile) {
+        infoToggle.classList.add('visible');
+    } else {
+        infoToggle.classList.remove('visible');
+    }
+}
+
+// Enable viewport interaction (3D model controls)
+function enableViewportInteraction() {
+    const viewport = document.getElementById('viewport');
+    if (viewport) {
+        viewport.style.pointerEvents = 'auto';
+        viewport.style.userSelect = 'auto';
+    }
+}
+
+// Disable viewport interaction when card is open
+function disableViewportInteraction() {
+    const viewport = document.getElementById('viewport');
+    if (viewport) {
+        viewport.style.pointerEvents = 'none';
+        viewport.style.userSelect = 'none';
+    }
+}
+
+// Close sidebar when clicking outside on mobile
+document.addEventListener('click', (event) => {
+    if (isMobile) {
+        const sidebar = document.getElementById('sidebar');
+        const mobileToggle = document.querySelector('.mobile-toggle');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (sidebar && sidebar.classList.contains('active') && 
+            !sidebar.contains(event.target) && 
+            !mobileToggle.contains(event.target) &&
+            !overlay.contains(event.target)) {
+            // Assuming toggleSidebar is defined elsewhere or will be added
+            // toggleSidebar(); 
+        }
+    }
+});
+
+// Performance optimization: Pause animations when tab is not visible
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        // Pause animations
+        if (autoRotate) {
+            autoRotate = false;
+            const btn = document.getElementById('autoRotateBtn');
+            if (btn) btn.style.background = 'rgba(255, 255, 255, 0.1)';
+        }
+    }
+});
 
 // Initialize the application
 window.addEventListener('load', init);
+
+// Add loading state management
+window.addEventListener('beforeunload', () => {
+    // Clean up resources
+    if (renderer) {
+        renderer.dispose();
+    }
+});
