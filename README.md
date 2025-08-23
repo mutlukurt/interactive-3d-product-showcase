@@ -1,5 +1,7 @@
 # 🚀 Interactive 3D Product Showcase - Mobile-First Responsive Design
 
+🌐 **[Live Demo](https://mutlukurt.github.io/interactive-3d-product-showcase/)**
+
 A fully responsive, mobile-optimized 3D product showcase built with Three.js, featuring a mobile-first design approach that works perfectly across all devices and screen sizes.
 
 ## ✨ Features
